@@ -23,8 +23,7 @@ function App(){
  const [secrets,setSecrets]=useState<number[]>([]);
  const [ritual,setRitual]=useState<"still"|"courage"|"hide">("still");
  const [visits,setVisits]=useState(()=>Number(localStorage.getItem("shy-visits")||0)+1);
- const [introShy,setIntroShy]=useState(false);
- const [peekSpot,setPeekSpot]=useState<number|null>(null);
+  const [peekSpot,setPeekSpot]=useState<number|null>(null);
  const [peekFound,setPeekFound]=useState(false);
  const [peekMisses,setPeekMisses]=useState<number[]>([]);
  const [glowbugs,setGlowbugs]=useState<number[]>([]);
@@ -39,8 +38,7 @@ function App(){
  const stopAmbient=()=>{const c=audio.current,nodes=ambient.current;if(!c||!nodes)return;nodes.master.gain.cancelScheduledValues(c.currentTime);nodes.master.gain.setValueAtTime(Math.max(.0001,nodes.master.gain.value),c.currentTime);nodes.master.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.65);window.setTimeout(()=>{try{nodes.warm.stop();nodes.air.stop();nodes.lfo.stop();nodes.master.disconnect()}catch{}},700);ambient.current=null};
  const toggleSound=async(checked:boolean)=>{if(!checked){setSound(false);stopAmbient();return}await startAmbient();setSound(true);await Promise.all([playTone(392,true,0),playTone(523.25,true,.16),playTone(659.25,true,.34)])};
  useEffect(()=>{localStorage.setItem("shy-visits",String(visits))},[visits]);
- useEffect(()=>{const hide=window.setTimeout(()=>setIntroShy(true),550);const peek=window.setTimeout(()=>setIntroShy(false),2800);return()=>{window.clearTimeout(hide);window.clearTimeout(peek)}},[]);
- useEffect(()=>{localStorage.setItem("shy-trust",String(Math.round(trust)))},[trust]);
+  useEffect(()=>{localStorage.setItem("shy-trust",String(Math.round(trust)))},[trust]);
  useEffect(()=>{if(!sound)return;const timer=window.setInterval(()=>{void playTone(trust>60?493.88:349.23);window.setTimeout(()=>void playTone(trust>60?659.25:440),220)},5400);return()=>window.clearInterval(timer)},[sound,trust]);
  useEffect(()=>()=>{if(dwell.current)window.clearTimeout(dwell.current);stopAmbient();void audio.current?.close()},[]);
  useEffect(()=>{const interval=setInterval(()=>{if(velocity<.18){calm.current++;if(calm.current%3===0)setTrust(t=>clamp(t+.7))}else calm.current=0},900);return()=>clearInterval(interval)},[velocity]);
@@ -64,7 +62,7 @@ function App(){
     <div className="eyebrow"><span>BEHAVIORAL INTERFACE</span><span>VISIT {String(visits).padStart(2,"0")}</span></div>
     <h1>The website<br/>that gets <em>shyer.</em></h1>
     <p>This interface reads the speed and patience of your cursor. Rush toward it and it retreats. Move gently and it slowly decides you are safe.</p>
-    <div className={`premise-demo ${introShy?"retreating":"peeking"}`} aria-live="polite"><div className="demo-door"/><img src={`${import.meta.env.BASE_URL}pip/pip-curious.png`} alt="Pip cautiously peeking, then hiding when noticed"/><span>{introShy?"YOU LOOKED — PIP DUCKED AWAY":"PIP IS CHECKING IF IT IS SAFE"}</span><button type="button" onClick={()=>{setIntroShy(true);window.setTimeout(()=>setIntroShy(false),1800)}}>SHOW ME AGAIN</button></div>
+    <div className="premise-demo peeking" aria-label="Hover near Pip to see him get shy"><div className="demo-door"/><img src={`${import.meta.env.BASE_URL}pip/pip-curious.png`} alt="Pip cautiously peeking from beside a doorway"/><span className="demo-calm">MOVE OVER PIP — HE GETS SHY</span><span className="demo-hover">YOU GOT CLOSE — PIP DUCKED AWAY</span></div>
     <div className="meter" aria-label={`Trust level ${Math.round(trust)} percent`}><span style={{width:`${trust}%`}}/><i style={{left:`${trust}%`}}/></div>
    </section>
    <section className="encounter" aria-live="polite" onDoubleClick={leaveKindness}>
