@@ -40,7 +40,7 @@ function App(){
    </section>
    <section className="encounter" aria-live="polite">
     <div className="creature" style={{"--fear":`${(100-trust)/100}`} as React.CSSProperties} onPointerEnter={approach} tabIndex={0} onFocus={approach}>
-      <div className="halo"/><div className="face"><i/><i/><span/></div><small>APPROACH SLOWLY</small>
+      <div className="halo"/><div className="buddy" aria-hidden="true"><i className="ear ear-left"/><i className="ear ear-right"/><div className="buddy-body"><i className="tuft"/><div className="face"><i className="eye"/><i className="eye"/><b className="nose"/><span className="mouth"/><b className="cheeks"/></div><i className="arm arm-left"/><i className="arm arm-right"/></div><i className="foot foot-left"/><i className="foot foot-right"/></div><small>APPROACH SLOWLY</small>
     </div>
     <article><small>LIVE RESPONSE / {String(stage+1).padStart(2,"0")}</small><h2>{phrases[Math.min(phrases.length-1,Math.floor(trust/19))]}</h2><p>{stage===0?"The page is keeping its distance.":stage===1?"It is still cautious, but it has stopped hiding.":stage===2?"New details are appearing. It remembers your patience.":"Trust established. The interface is no longer trying to leave."}</p><button onClick={approach}>EXTEND A HAND <span>↗</span></button></article>
    </section>
