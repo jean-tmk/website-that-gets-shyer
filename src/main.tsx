@@ -18,16 +18,25 @@ function App(){
  const [history,setHistory]=useState<HistoryItem[]>([]);
  const [reduced,setReduced]=useState(matchMedia("(prefers-reduced-motion: reduce)").matches);
  const [sound,setSound]=useState(false);
+ const [note,setNote]=useState("");
+ const [kindness,setKindness]=useState<{id:number;x:number;y:number}[]>([]);
  const [visits,setVisits]=useState(()=>Number(localStorage.getItem("shy-visits")||0)+1);
- const last=useRef({x:0,y:0,t:performance.now()});const calm=useRef(0);const audio=useRef<AudioContext|null>(null);
+ const last=useRef({x:0,y:0,t:performance.now()});const calm=useRef(0);const audio=useRef<AudioContext|null>(null);const dwell=useRef<number|null>(null);
  const stage=useMemo(()=>trust<22?0:trust<45?1:trust<72?2:3,[trust]);
  const record=(event:string,delta:number)=>setHistory(items=>[{at:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),event,delta},...items].slice(0,5));
- const tone=(frequency:number)=>{if(!sound)return;audio.current??=new AudioContext();const c=audio.current,o=c.createOscillator(),g=c.createGain();o.frequency.value=frequency;o.type="sine";g.gain.setValueAtTime(.035,c.currentTime);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.5);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+.5)};
+ const playTone=(frequency:number,force=false)=>{if(!sound&&!force)return;const Audio=window.AudioContext||(window as typeof window & {webkitAudioContext:typeof AudioContext}).webkitAudioContext;if(!Audio)return;audio.current??=new Audio();const c=audio.current;if(c.state==="suspended")void c.resume();const o=c.createOscillator(),g=c.createGain();o.frequency.value=frequency;o.type="sine";g.gain.setValueAtTime(.0001,c.currentTime);g.gain.exponentialRampToValueAtTime(.028,c.currentTime+.04);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.72);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+.75)};
+ const toggleSound=async(checked:boolean)=>{setSound(checked);if(checked){playTone(523.25,true);window.setTimeout(()=>playTone(659.25,true),130)}};
  useEffect(()=>{localStorage.setItem("shy-visits",String(visits))},[visits]);
  useEffect(()=>{localStorage.setItem("shy-trust",String(Math.round(trust)))},[trust]);
+ useEffect(()=>{if(!sound)return;const timer=window.setInterval(()=>playTone(trust>60?392:329.63),6200);return()=>window.clearInterval(timer)},[sound,trust]);
+ useEffect(()=>()=>{if(dwell.current)window.clearTimeout(dwell.current);void audio.current?.close()},[]);
  useEffect(()=>{const interval=setInterval(()=>{if(velocity<.18){calm.current++;if(calm.current%3===0)setTrust(t=>clamp(t+.7))}else calm.current=0},900);return()=>clearInterval(interval)},[velocity]);
  const move=(e:React.PointerEvent)=>{const now=performance.now(),dt=Math.max(16,now-last.current.t),speed=Math.hypot(e.clientX-last.current.x,e.clientY-last.current.y)/dt;last.current={x:e.clientX,y:e.clientY,t:now};setCursor({x:e.clientX,y:e.clientY});setVelocity(speed);if(speed>1.25)setTrust(t=>clamp(t-.34));};
- const approach=()=>{const delta=velocity<.35?8:velocity<.8?2:-7;setTrust(t=>clamp(t+delta));record(delta>0?"patient approach":"startled",delta);tone(delta>0?440:180)};
+ const approach=()=>{const delta=velocity<.35?8:velocity<.8?2:-7;setTrust(t=>clamp(t+delta));record(delta>0?"patient approach":"startled",delta);playTone(delta>0?440:180)};
+ const beginDwell=()=>{if(dwell.current)window.clearTimeout(dwell.current);dwell.current=window.setTimeout(()=>{setTrust(t=>clamp(t+6));record("quiet company",6);playTone(493.88)},1200)};
+ const endDwell=()=>{if(dwell.current)window.clearTimeout(dwell.current);dwell.current=null};
+ const leaveKindness=(e:React.PointerEvent)=>{const box=e.currentTarget.getBoundingClientRect();setKindness(items=>[...items.slice(-11),{id:Date.now(),x:(e.clientX-box.left)/box.width*100,y:(e.clientY-box.top)/box.height*100}]);setTrust(t=>clamp(t+3));record("kindness bloom",3);playTone(587.33)};
+ const deliverNote=()=>{if(!note.trim())return;setTrust(t=>clamp(t+10));record("kind note left",10);setNote("");playTone(659.25)};
  const reset=()=>{setTrust(18);setHistory([]);localStorage.removeItem("shy-trust")};
  return <main onPointerMove={move} className={`app stage-${stage} ${reduced?"reduced":""}`}>
    <Field cursor={cursor} trust={trust} reduced={reduced}/><div className="grain"/>
@@ -38,15 +47,16 @@ function App(){
     <p>This interface reads the speed and patience of your cursor. Rush toward it and it retreats. Move gently and it slowly decides you are safe.</p>
     <div className="meter" aria-label={`Trust level ${Math.round(trust)} percent`}><span style={{width:`${trust}%`}}/><i style={{left:`${trust}%`}}/></div>
    </section>
-   <section className="encounter" aria-live="polite">
-    <div className="creature" style={{"--fear":`${(100-trust)/100}`} as React.CSSProperties} onPointerEnter={approach} tabIndex={0} onFocus={approach}>
-      <div className="halo"/><div className="buddy" aria-hidden="true"><i className="ear ear-left"/><i className="ear ear-right"/><div className="buddy-body"><i className="tuft"/><div className="face"><i className="eye"/><i className="eye"/><b className="nose"/><span className="mouth"/><b className="cheeks"/></div><i className="arm arm-left"/><i className="arm arm-right"/></div><i className="foot foot-left"/><i className="foot foot-right"/></div><small>APPROACH SLOWLY</small>
+   <section className="encounter" aria-live="polite" onDoubleClick={leaveKindness}>
+    {kindness.map((bloom,i)=><i className="kindness-bloom" key={bloom.id} style={{left:`${bloom.x}%`,top:`${bloom.y}%`,"--bloom":i} as React.CSSProperties}>✿</i>)}
+    <div className="creature" style={{"--fear":`${(100-trust)/100}`} as React.CSSProperties} onPointerEnter={()=>{approach();beginDwell()}} onPointerLeave={endDwell} tabIndex={0} onFocus={()=>{approach();beginDwell()}} onBlur={endDwell}>
+      <div className="halo"/><div className="buddy" aria-hidden="true"><i className="ear ear-left"/><i className="ear ear-right"/><i className="star-pin">✦</i><div className="buddy-body"><i className="tuft"/><div className="face"><i className="eye"/><i className="eye"/><b className="nose"/><span className="mouth"/><b className="cheeks"/></div><i className="arm arm-left"/><i className="arm arm-right"/><u className="scarf"/></div><i className="foot foot-left"/><i className="foot foot-right"/></div><small>{stage<2?"MOCHI IS HIDING — APPROACH SLOWLY":"MOCHI IS LISTENING"}</small>
     </div>
-    <article><small>LIVE RESPONSE / {String(stage+1).padStart(2,"0")}</small><h2>{phrases[Math.min(phrases.length-1,Math.floor(trust/19))]}</h2><p>{stage===0?"The page is keeping its distance.":stage===1?"It is still cautious, but it has stopped hiding.":stage===2?"New details are appearing. It remembers your patience.":"Trust established. The interface is no longer trying to leave."}</p><button onClick={approach}>EXTEND A HAND <span>↗</span></button></article>
+    <article><small>LIVE RESPONSE / {String(stage+1).padStart(2,"0")}</small><h2>{phrases[Math.min(phrases.length-1,Math.floor(trust/19))]}</h2><p>{stage===0?"Mochi is behind the curtain. Fast movement makes the room close up.":stage===1?"A cautious peek. Stay nearby without chasing.":stage===2?"The room is blooming. Mochi remembers your patience.":"Trust established. Mochi will stay even when you move."}</p><div className="ritual"><label htmlFor="kind-note">LEAVE SOMETHING KIND</label><div><input id="kind-note" value={note} onChange={e=>setNote(e.target.value)} onKeyDown={e=>e.key==="Enter"&&deliverNote()} placeholder="you don't have to come closer…"/><button onClick={deliverNote}>LEAVE NOTE</button></div><small>DOUBLE-CLICK THE ROOM TO GROW A KINDNESS BLOOM · HOVER QUIETLY FOR 1.2 SECONDS</small></div></article>
    </section>
    <section className="lab">
     <article className="telemetry"><header><span>BEHAVIOR LOG</span><b>LIVE</b></header>{history.length?history.map((item,i)=><div key={`${item.at}-${i}`}><time>{item.at}</time><span>{item.event}</span><b className={item.delta>0?"gain":"loss"}>{item.delta>0?"+":""}{item.delta}</b></div>):<p>Move toward the creature to begin the observation.</p>}</article>
-    <article className="controls"><span>LAB CONTROLS</span><label><input type="checkbox" checked={sound} onChange={e=>setSound(e.target.checked)}/><i/> GENTLE AUDIO</label><label><input type="checkbox" checked={reduced} onChange={e=>setReduced(e.target.checked)}/><i/> REDUCED MOTION</label><button onClick={reset}>RESET RELATIONSHIP</button></article>
+    <article className="controls"><span>LAB CONTROLS</span><label><input type="checkbox" checked={sound} onChange={e=>void toggleSound(e.target.checked)}/><i/> {sound?"GENTLE AUDIO — PLAYING":"GENTLE AUDIO"}</label><label><input type="checkbox" checked={reduced} onChange={e=>setReduced(e.target.checked)}/><i/> REDUCED MOTION</label><button onClick={reset}>RESET RELATIONSHIP</button></article>
     <article className="method"><span>HOW IT WORKS</span><h3>Motion becomes temperament.</h3><p>Pointer velocity, dwell time, approach events, focus behavior, and returning visits feed a small client-side state machine. Your trust score stays on this device.</p><div><b>REACT</b><b>TYPESCRIPT</b><b>CANVAS</b><b>WEB AUDIO</b><b>LOCAL STORAGE</b></div></article>
    </section>
    <footer><span>AN EXPERIMENT IN PATIENCE</span><b>{trust>=72?"IT REMEMBERS YOU":"TRY AGAIN, MORE SLOWLY"}</b><a href="https://github.com/jean-tmk/website-that-gets-shyer">SOURCE ↗</a></footer>
