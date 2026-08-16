@@ -26,6 +26,7 @@ function App(){
  const [introShy,setIntroShy]=useState(false);
  const [peekSpot,setPeekSpot]=useState<number|null>(null);
  const [peekFound,setPeekFound]=useState(false);
+ const [peekMisses,setPeekMisses]=useState<number[]>([]);
  const [glowbugs,setGlowbugs]=useState<number[]>([]);
  const [lullaby,setLullaby]=useState<number[]>([]);
  const last=useRef({x:0,y:0,t:performance.now()});const calm=useRef(0);const audio=useRef<AudioContext|null>(null);const ambient=useRef<{master:GainNode;warm:OscillatorNode;air:OscillatorNode;lfo:OscillatorNode}|null>(null);const dwell=useRef<number|null>(null);
@@ -51,11 +52,11 @@ function App(){
  const deliverNote=()=>{if(!note.trim())return;setTrust(t=>clamp(t+10));record("kind note left",10);setNote("");void playTone(659.25)};
  const collectSecret=(id:number)=>{if(secrets.includes(id))return;setSecrets(items=>[...items,id]);setTrust(t=>clamp(t+5));record("quiet star found",5);void playTone([523.25,587.33,698.46][id-1]||523.25)};
  const chooseRitual=(next:"still"|"courage"|"hide")=>{setRitual(next);const delta=next==="courage"?9:next==="hide"?4:6;setTrust(t=>clamp(t+delta));record(next==="courage"?"courage sent":next==="hide"?"shared hiding place":"quiet minute",delta);void playTone(next==="courage"?698.46:next==="hide"?349.23:493.88)};
- const startPeek=()=>{setPeekSpot(Math.floor(Math.random()*3));setPeekFound(false);record("peekaboo started",1)};
- const choosePeek=(spot:number)=>{if(peekSpot===null)return;if(spot===peekSpot){setPeekFound(true);setTrust(t=>clamp(t+7));record("Pip found gently",7);void playTone(659.25)}else{setTrust(t=>clamp(t-1));record("empty hiding place",-1);void playTone(261.63)}};
+ const startPeek=()=>{setPeekSpot(Math.floor(Math.random()*3));setPeekFound(false);setPeekMisses([]);record("peekaboo started",1)};
+ const choosePeek=(spot:number)=>{if(peekSpot===null)return;if(spot===peekSpot){setPeekFound(true);setTrust(t=>clamp(t+7));record("Pip found gently",7);void playTone(659.25)}else{setPeekMisses(items=>items.includes(spot)?items:[...items,spot]);setTrust(t=>clamp(t-1));record("empty hiding place",-1);void playTone(261.63)}};
  const catchGlowbug=(id:number)=>{if(glowbugs.includes(id))return;setGlowbugs(items=>[...items,id]);setTrust(t=>clamp(t+2));record("glowbug guided home",2);void playTone(440+id*44)};
  const addLullaby=(frequency:number)=>{setLullaby(notes=>[...notes.slice(-7),frequency]);void playTone(frequency,true);if(lullaby.length===7){setTrust(t=>clamp(t+5));record("tiny lullaby made",5)}};
- const reset=()=>{setTrust(18);setHistory([]);setPeekSpot(null);setPeekFound(false);setGlowbugs([]);setLullaby([]);localStorage.removeItem("shy-trust")};
+ const reset=()=>{setTrust(18);setHistory([]);setPeekSpot(null);setPeekFound(false);setPeekMisses([]);setGlowbugs([]);setLullaby([]);localStorage.removeItem("shy-trust")};
  return <main onPointerMove={move} className={`app stage-${stage} ritual-${ritual} ${reduced?"reduced":""}`}>
    <Field cursor={cursor} trust={trust} reduced={reduced}/><div className="grain"/>
    <header><a className="brand" href="#top"><i/>SHY SYSTEMS LAB <span>EXP / 01</span></a><div className="status"><b>{Math.round(trust)}%</b><span>TRUST INDEX</span></div></header>
@@ -77,7 +78,7 @@ function App(){
    <section className="playroom">
     <header><small>THINGS TO DO / NO RUSH</small><h2>Play at Pip's pace.</h2><p>Each activity rewards noticing, listening, and trying again—not clicking fastest.</p></header>
     <div className="play-grid">
-     <article className="peek-game"><small>01 / PEEKABOO</small><h3>Which curtain?</h3><p>{peekSpot===null?"Invite Pip to hide.":peekFound?"You found him. He stayed this time.":"Choose gently—Pip may move."}</p><div>{[0,1,2].map(spot=><button key={spot} onClick={()=>choosePeek(spot)} className={peekFound&&peekSpot===spot?"found":""}><i>▥</i>{peekFound&&peekSpot===spot?<img src={`${import.meta.env.BASE_URL}pip/pip-hiding.png`} alt="Pip"/>:<span>CURTAIN {spot+1}</span>}</button>)}</div><button className="start-game" onClick={startPeek}>{peekSpot===null?"ASK PIP TO HIDE":"HIDE AGAIN"}</button>
+     <article className="peek-game"><small>01 / PEEKABOO</small><h3>Which curtain?</h3><p>{peekSpot===null?"Invite Pip to hide.":peekFound?"You found him. He stayed this time.":"Choose gently—Pip may move."}</p><div>{[0,1,2].map(spot=><button key={spot} onClick={()=>choosePeek(spot)} className={peekFound&&peekSpot===spot?"found":peekMisses.includes(spot)?"empty":""}><i>▥</i>{peekFound&&peekSpot===spot?<img src={`${import.meta.env.BASE_URL}pip/pip-hiding.png`} alt="Pip"/>:peekMisses.includes(spot)?<span className="empty-room"><b>EMPTY</b><em>Pip isn't here</em></span>:<span>CURTAIN {spot+1}</span>}</button>)}</div><button className="start-game" onClick={startPeek}>{peekSpot===null?"ASK PIP TO HIDE":"HIDE AGAIN"}</button>
      </article>
      <article className="glow-game"><small>02 / GLOWBUGS</small><h3>Guide them home.</h3><p>{glowbugs.length} of 6 glowbugs found. They brighten when you notice them.</p><div>{[0,1,2,3,4,5].map(id=><button key={id} className={glowbugs.includes(id)?"caught":""} onClick={()=>catchGlowbug(id)} aria-label={glowbugs.includes(id)?"Glowbug collected":"Collect glowbug"}>✦</button>)}</div>
      </article>
