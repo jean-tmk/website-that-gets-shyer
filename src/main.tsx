@@ -35,7 +35,7 @@ function App(){
  const approach=()=>{const delta=velocity<.35?8:velocity<.8?2:-7;setTrust(t=>clamp(t+delta));record(delta>0?"patient approach":"startled",delta);playTone(delta>0?440:180)};
  const beginDwell=()=>{if(dwell.current)window.clearTimeout(dwell.current);dwell.current=window.setTimeout(()=>{setTrust(t=>clamp(t+6));record("quiet company",6);playTone(493.88)},1200)};
  const endDwell=()=>{if(dwell.current)window.clearTimeout(dwell.current);dwell.current=null};
- const leaveKindness=(e:React.PointerEvent)=>{const box=e.currentTarget.getBoundingClientRect();setKindness(items=>[...items.slice(-11),{id:Date.now(),x:(e.clientX-box.left)/box.width*100,y:(e.clientY-box.top)/box.height*100}]);setTrust(t=>clamp(t+3));record("kindness bloom",3);playTone(587.33)};
+ const leaveKindness=(e:React.MouseEvent<HTMLElement>)=>{const box=e.currentTarget.getBoundingClientRect();setKindness(items=>[...items.slice(-11),{id:Date.now(),x:(e.clientX-box.left)/box.width*100,y:(e.clientY-box.top)/box.height*100}]);setTrust(t=>clamp(t+3));record("kindness bloom",3);playTone(587.33)};
  const deliverNote=()=>{if(!note.trim())return;setTrust(t=>clamp(t+10));record("kind note left",10);setNote("");playTone(659.25)};
  const reset=()=>{setTrust(18);setHistory([]);localStorage.removeItem("shy-trust")};
  return <main onPointerMove={move} className={`app stage-${stage} ${reduced?"reduced":""}`}>
